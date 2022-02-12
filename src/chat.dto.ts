@@ -75,7 +75,6 @@ export type SlackPostNewMessage = {
   channel: string;
   thread_ts?: string | null;
   text: string;
-  mr_id: string;
 };
 
 export type SlackPostUpdateMessage = {

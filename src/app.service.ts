@@ -3,7 +3,6 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Message, MessageDocument } from './message.schema';
 import { getMessage } from './helpers';
-import { mergeRequest } from './fixtures/git';
 import { ChatService } from './chat.service';
 import { SlackEventCallbackDto } from './chat.dto';
 import { GitService } from './git.service';
@@ -18,32 +17,16 @@ export class AppService {
     private gitService: GitService,
   ) {}
 
-  async findOneMessage({ channel, thread_ts, mr_id }: FindOneDto) {
-    return this.messageModel
-      .findOne({
-        channel,
-        thread_ts,
-        mr_id,
-      })
-      .exec();
+  async findOneMessage(args: FindOneDto) {
+    return this.messageModel.findOne(args).exec();
   }
 
-  async findOneAndDeleteMessage({ channel, thread_ts }: FindOneDto) {
-    return this.messageModel
-      .findOneAndDelete({
-        channel,
-        thread_ts,
-      })
-      .exec();
+  async findOneAndDeleteMessage(args: FindOneDto) {
+    return this.messageModel.findOneAndDelete(args).exec();
   }
 
-  async saveNewMessage({ mr_id, ts, channel, thread_ts }: FindOneDto) {
-    const createdMessage = new this.messageModel({
-      mr_id,
-      ts,
-      channel,
-      thread_ts,
-    });
+  async saveNewMessage(args: FindOneDto) {
+    const createdMessage = new this.messageModel(args);
 
     return createdMessage.save();
   }
@@ -58,11 +41,14 @@ export class AppService {
       return;
     }
 
+    const webUrl = slackBody.event.message.text
+      .replace('<', '')
+      .replace('>', '');
     const mergeRequestData = await this.gitService.getMergeRequest({
-      webUrl: slackBody.event.message.text.replace('<', '').replace('>', ''),
+      webUrl,
     });
 
-    mergeRequestMessageCache.mr_id = `${mergeRequest.project_id}-${mergeRequest.iid}`;
+    mergeRequestMessageCache.mr_id = webUrl;
     mergeRequestMessageCache.save();
 
     await this.chatService.postSlackUpdateMessage({
@@ -88,7 +74,7 @@ export class AppService {
       return;
     }
 
-    this.chatService.postSlackUpdateMessage({
+    await this.chatService.postSlackUpdateMessage({
       channel: mergeRequestMessageCache.channel,
       ts: mergeRequestMessageCache.ts,
       thread_ts: mergeRequestMessageCache.thread_ts,
@@ -97,8 +83,13 @@ export class AppService {
   }
 
   async handleNewMessage(slackBody: SlackEventCallbackDto) {
+    const webUrl = slackBody.event.text.replace('<', '').replace('>', '');
     const mergeRequest = await this.gitService.getMergeRequest({
-      webUrl: slackBody.event.text.replace('<', '').replace('>', ''),
+      webUrl,
+    });
+
+    const mergeRequestMessageCache = await this.findOneMessage({
+      mr_id: webUrl,
     });
 
     if (!mergeRequest) {
@@ -107,17 +98,31 @@ export class AppService {
 
     const chatMessage = await this.chatService.postSlackNewMessage({
       channel: slackBody.event.channel,
-      thread_ts: slackBody.event.event_ts,
+      thread_ts: slackBody.event.ts,
       text: getMessage(mergeRequest),
-      mr_id: `${mergeRequest.project_id}-${mergeRequest.iid}`,
     });
 
-    this.saveNewMessage({
-      mr_id: mergeRequest.id,
-      ts: chatMessage.ts,
-      channel: slackBody.event.channel,
-      thread_ts: slackBody.event.event_ts,
-    });
+    if (mergeRequestMessageCache) {
+      await this.chatService.postSlackUpdateMessage({
+        channel: mergeRequestMessageCache.channel,
+        ts: mergeRequestMessageCache.ts,
+        thread_ts: mergeRequestMessageCache.thread_ts,
+        text: 'Link reposted.',
+      });
+
+      mergeRequestMessageCache.mr_id = webUrl;
+      mergeRequestMessageCache.ts = chatMessage.ts;
+      mergeRequestMessageCache.channel = slackBody.event.channel;
+      mergeRequestMessageCache.thread_ts = slackBody.event.ts;
+      mergeRequestMessageCache.save();
+    } else {
+      this.saveNewMessage({
+        mr_id: webUrl,
+        ts: chatMessage.ts,
+        channel: slackBody.event.channel,
+        thread_ts: slackBody.event.ts,
+      });
+    }
 
     // await this.chatService.postSlackReactions({
     //   channel: slackBody.event.channel,
@@ -127,7 +132,7 @@ export class AppService {
 
   async handleMergerRequestUpdate(body: GitlabMergeRequestEventDto) {
     const mergeRequestMessageCache = await this.findOneMessage({
-      mr_id: `${body.object_attributes.source_project_id}-${body.object_attributes.iid}`,
+      mr_id: body.object_attributes.url,
     });
 
     if (!mergeRequestMessageCache) {
@@ -138,7 +143,7 @@ export class AppService {
       webUrl: body.object_attributes.url,
     });
 
-    this.chatService.postSlackUpdateMessage({
+    await this.chatService.postSlackUpdateMessage({
       channel: mergeRequestMessageCache.channel,
       ts: mergeRequestMessageCache.ts,
       thread_ts: mergeRequestMessageCache.thread_ts,

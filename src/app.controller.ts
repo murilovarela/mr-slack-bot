@@ -55,6 +55,8 @@ export class AppController {
   @Post('/git')
   postGit(@Body() body: GitlabMergeRequestEventDto): unknown {
     this.appService.handleMergerRequestUpdate(body);
+    console.log('mr_changed');
+
     return '';
   }
 }

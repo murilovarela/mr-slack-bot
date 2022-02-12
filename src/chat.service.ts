@@ -19,22 +19,13 @@ export class ChatService {
   slackWebClient = new WebClient(process.env.SLACK_OAUTH);
 
   async postSlackNewMessage(messageInfo: SlackPostNewMessage) {
-    const response = await this.slackWebClient.chat.postMessage({
-      channel: messageInfo.channel,
-      thread_ts: messageInfo.thread_ts,
-      text: messageInfo.text,
-    });
+    const response = await this.slackWebClient.chat.postMessage(messageInfo);
 
     return response;
   }
 
   async postSlackUpdateMessage(messageInfo: SlackPostUpdateMessage) {
-    const response = await this.slackWebClient.chat.update({
-      channel: messageInfo.channel,
-      thread_ts: messageInfo.thread_ts,
-      ts: messageInfo.ts,
-      text: messageInfo.text,
-    });
+    const response = await this.slackWebClient.chat.update(messageInfo);
 
     return response;
   }
