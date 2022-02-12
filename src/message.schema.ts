@@ -11,6 +11,9 @@ export class Message {
 
   @Prop()
   thread_ts: string;
+
+  @Prop()
+  mr_id: string;
 }
 
 export type MessageDocument = Message & Document;

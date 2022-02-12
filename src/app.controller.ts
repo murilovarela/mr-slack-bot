@@ -1,19 +1,24 @@
 import { Body, Controller, Post } from '@nestjs/common';
+import { AppService } from './app.service';
+import { ChatService } from './chat.service';
 import {
-  GetChallengeDto,
+  ChallengeDto,
   GlobalSlackEventDto,
   SlackEventCallbackDto,
-} from './app.dto';
-import { AppService } from './app.service';
+} from './chat.dto';
+import { GitlabMergeRequestEventDto } from './git.dto';
 
 @Controller()
 export class AppController {
-  constructor(private readonly appService: AppService) {}
+  constructor(
+    private readonly appService: AppService,
+    private readonly chatService: ChatService,
+  ) {}
 
   @Post('/slack')
   postSlack(@Body() body: GlobalSlackEventDto): unknown {
     if (body.type === 'url_verification') {
-      return this.appService.getChallenge(body as GetChallengeDto);
+      return this.chatService.handleChallenge(body as ChallengeDto);
     }
 
     if (body.type === 'event_callback') {
@@ -25,19 +30,19 @@ export class AppController {
       ) {
         if (body.event.subtype === 'message_changed') {
           if (body.event.message.subtype === 'tombstone') {
-            this.appService.getMessageDelete(body as SlackEventCallbackDto);
+            this.appService.handleMessageDelete(body as SlackEventCallbackDto);
             console.log('message_deleted');
 
             return 'deleted';
           }
 
-          this.appService.getMessageUpdate(body as SlackEventCallbackDto);
+          this.appService.handleMessageUpdate(body as SlackEventCallbackDto);
           console.log('message_changed');
 
           return 'updated';
         }
 
-        this.appService.getNewMessage(body as SlackEventCallbackDto);
+        this.appService.handleNewMessage(body as SlackEventCallbackDto);
         console.log('message_created');
 
         return 'new message';
@@ -48,8 +53,8 @@ export class AppController {
   }
 
   @Post('/git')
-  postGit(@Body() body: unknown): unknown {
-    console.log(body);
+  postGit(@Body() body: GitlabMergeRequestEventDto): unknown {
+    this.appService.handleMergerRequestUpdate(body);
     return '';
   }
 }

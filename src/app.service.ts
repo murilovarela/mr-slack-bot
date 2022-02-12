@@ -1,123 +1,148 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { WebClient } from '@slack/web-api';
-import { Gitlab } from '@gitbeaker/node';
 import { Model } from 'mongoose';
-import {
-  GetChallengeDto,
-  GitLabGetMergeRequestDto,
-  SlackEventCallbackDto,
-  SlackPostNewMessage,
-  SlackPostUpdateMessage,
-} from './app.dto';
 import { Message, MessageDocument } from './message.schema';
-
-type ChallangeResponse = {
-  challenge: string;
-};
-
+import { getMessage } from './helpers';
+import { mergeRequest } from './fixtures/git';
+import { ChatService } from './chat.service';
+import { SlackEventCallbackDto } from './chat.dto';
+import { GitService } from './git.service';
+import { GitlabMergeRequestEventDto } from './git.dto';
+import { FindOneDto } from './app.dto';
 @Injectable()
 export class AppService {
   constructor(
     @InjectModel(Message.name)
     private messageModel: Model<MessageDocument>,
+    private chatService: ChatService,
+    private gitService: GitService,
   ) {}
 
-  getChallenge({ challenge }: GetChallengeDto): ChallangeResponse {
-    return {
-      challenge,
-    };
-  }
-
-  async getMessageUpdate(slackBody: SlackEventCallbackDto) {
-    const mrMessageCache = await this.messageModel
+  async findOneMessage({ channel, thread_ts, mr_id }: FindOneDto) {
+    return this.messageModel
       .findOne({
-        channel: slackBody.event.channel,
-        thread_ts: slackBody.event.message.thread_ts,
+        channel,
+        thread_ts,
+        mr_id,
       })
       .exec();
+  }
 
-    if (!mrMessageCache) {
+  async findOneAndDeleteMessage({ channel, thread_ts }: FindOneDto) {
+    return this.messageModel
+      .findOneAndDelete({
+        channel,
+        thread_ts,
+      })
+      .exec();
+  }
+
+  async saveNewMessage({ mr_id, ts, channel, thread_ts }: FindOneDto) {
+    const createdMessage = new this.messageModel({
+      mr_id,
+      ts,
+      channel,
+      thread_ts,
+    });
+
+    return createdMessage.save();
+  }
+
+  async handleMessageUpdate(slackBody: SlackEventCallbackDto) {
+    const mergeRequestMessageCache = await this.findOneMessage({
+      channel: slackBody.event.channel,
+      thread_ts: slackBody.event.message.thread_ts,
+    });
+
+    if (!mergeRequestMessageCache) {
       return;
     }
 
-    this.postSlackUpdateMessage({
-      channel: mrMessageCache.channel,
-      ts: mrMessageCache.ts,
-      thread_ts: mrMessageCache.thread_ts,
-      text: 'eita atualizou a mensagem',
+    const mergeRequestData = await this.gitService.getMergeRequest({
+      webUrl: slackBody.event.message.text.replace('<', '').replace('>', ''),
+    });
+
+    mergeRequestMessageCache.mr_id = `${mergeRequest.project_id}-${mergeRequest.iid}`;
+    mergeRequestMessageCache.save();
+
+    await this.chatService.postSlackUpdateMessage({
+      channel: mergeRequestMessageCache.channel,
+      ts: mergeRequestMessageCache.ts,
+      thread_ts: mergeRequestMessageCache.thread_ts,
+      text: getMessage(mergeRequestData),
+    });
+
+    await this.chatService.postSlackReactions({
+      channel: mergeRequestMessageCache.channel,
+      ts: mergeRequestMessageCache.thread_ts,
     });
   }
 
-  async getMessageDelete(slackBody: SlackEventCallbackDto) {
-    const mrMessageCache = await this.messageModel
-      .findOne({
-        channel: slackBody.event.channel,
-        thread_ts: slackBody.event.message.thread_ts,
-      })
-      .exec();
+  async handleMessageDelete(slackBody: SlackEventCallbackDto) {
+    const mergeRequestMessageCache = await this.findOneAndDeleteMessage({
+      channel: slackBody.event.channel,
+      thread_ts: slackBody.event.message.thread_ts,
+    });
 
-    if (!mrMessageCache) {
+    if (!mergeRequestMessageCache) {
       return;
     }
 
-    this.postSlackUpdateMessage({
-      channel: mrMessageCache.channel,
-      ts: mrMessageCache.ts,
-      thread_ts: mrMessageCache.thread_ts,
+    this.chatService.postSlackUpdateMessage({
+      channel: mergeRequestMessageCache.channel,
+      ts: mergeRequestMessageCache.ts,
+      thread_ts: mergeRequestMessageCache.thread_ts,
       text: 'Link deleted.',
     });
   }
 
-  async getNewMessage(slackBody: SlackEventCallbackDto) {
-    const a = await this.getMergeRequest({
-      webUrl:
-        'https://gitlab.com/sergiomurilovarela/test-project/-/merge_requests/1',
+  async handleNewMessage(slackBody: SlackEventCallbackDto) {
+    const mergeRequest = await this.gitService.getMergeRequest({
+      webUrl: slackBody.event.text.replace('<', '').replace('>', ''),
     });
-    
-    await this.postSlackNewMessage({
+
+    if (!mergeRequest) {
+      return;
+    }
+
+    const chatMessage = await this.chatService.postSlackNewMessage({
       channel: slackBody.event.channel,
       thread_ts: slackBody.event.event_ts,
-      text: 'eita nova mensagem',
+      text: getMessage(mergeRequest),
+      mr_id: `${mergeRequest.project_id}-${mergeRequest.iid}`,
     });
+
+    this.saveNewMessage({
+      mr_id: mergeRequest.id,
+      ts: chatMessage.ts,
+      channel: slackBody.event.channel,
+      thread_ts: slackBody.event.event_ts,
+    });
+
+    // await this.chatService.postSlackReactions({
+    //   channel: slackBody.event.channel,
+    //   ts: slackBody.event.event_ts,
+    // });
   }
 
-  async postSlackNewMessage(messageInfo: SlackPostNewMessage) {
-    const slackWebClient = new WebClient(process.env.SLACK_OAUTH);
-
-    const response = await slackWebClient.chat.postMessage({
-      channel: messageInfo.channel,
-      thread_ts: messageInfo.thread_ts,
-      text: messageInfo.text,
+  async handleMergerRequestUpdate(body: GitlabMergeRequestEventDto) {
+    const mergeRequestMessageCache = await this.findOneMessage({
+      mr_id: `${body.object_attributes.source_project_id}-${body.object_attributes.iid}`,
     });
 
-    const createdMessage = new this.messageModel({
-      ts: response.message.ts,
-      channel: response.channel,
-      thread_ts: response.message.thread_ts,
+    if (!mergeRequestMessageCache) {
+      return;
+    }
+
+    const mergeRequestData = await this.gitService.getMergeRequest({
+      webUrl: body.object_attributes.url,
     });
 
-    await createdMessage.save();
-  }
-
-  async postSlackUpdateMessage(messageInfo: SlackPostUpdateMessage) {
-    const slackWebClient = new WebClient(process.env.SLACK_OAUTH);
-
-    await slackWebClient.chat.update({
-      channel: messageInfo.channel,
-      thread_ts: messageInfo.thread_ts,
-      ts: messageInfo.ts,
-      text: messageInfo.text,
+    this.chatService.postSlackUpdateMessage({
+      channel: mergeRequestMessageCache.channel,
+      ts: mergeRequestMessageCache.ts,
+      thread_ts: mergeRequestMessageCache.thread_ts,
+      text: getMessage(mergeRequestData),
     });
-  }
-
-  async getMergeRequest({ webUrl }: GitLabGetMergeRequestDto) {
-    const gitlabClient = new Gitlab({
-      token: process.env.GITLAB_APP_OAUTH,
-    });
-
-    const response = await gitlabClient.MergeRequests.all();
-
-    return response.find((mr) => mr.web_url === webUrl);
   }
 }

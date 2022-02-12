@@ -3,6 +3,8 @@ import { ConfigModule } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { ChatService } from './chat.service';
+import { GitService } from './git.service';
 import { Message, MessageSchema } from './message.schema';
 
 @Module({
@@ -14,6 +16,6 @@ import { Message, MessageSchema } from './message.schema';
     MongooseModule.forFeature([{ name: Message.name, schema: MessageSchema }]),
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService, ChatService, GitService],
 })
 export class AppModule {}

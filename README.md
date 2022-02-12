@@ -9,6 +9,9 @@ This is a bot to get people to review your MR.
 - Displays MR size
 - Displays when MR is a draft
 - Displays pipelines statuses
+  has_conflicts
+  user_notes_count (commented?)
+  state
 
 ## How to develop it locally
 
