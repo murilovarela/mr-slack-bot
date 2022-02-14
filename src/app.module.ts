@@ -10,9 +10,7 @@ import { Message, MessageSchema } from './message.schema';
 @Module({
   imports: [
     ConfigModule.forRoot(),
-    MongooseModule.forRoot(
-      'mongodb+srv://murilovarela:nu4UfDzDsfgxtN4@cluster0.hzaao.mongodb.net/myFirstDatabase?retryWrites=true&w=majority',
-    ),
+    MongooseModule.forRoot(process.env.MONGO_URL),
     MongooseModule.forFeature([{ name: Message.name, schema: MessageSchema }]),
   ],
   controllers: [AppController],
