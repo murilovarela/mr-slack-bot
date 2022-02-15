@@ -2,12 +2,13 @@ import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Message, MessageDocument } from './message.schema';
-import { getMessage } from './helpers';
+import { getMessage, getReactions, getReminder } from './helpers';
 import { ChatService } from './chat.service';
 import { SlackEventCallbackDto } from './chat.dto';
 import { GitService } from './git.service';
 import { GitlabMergeRequestEventDto } from './git.dto';
 import { FindOneDto } from './app.dto';
+import { Cron, CronExpression } from '@nestjs/schedule';
 @Injectable()
 export class AppService {
   constructor(
@@ -19,6 +20,10 @@ export class AppService {
 
   async findOneMessage(args: FindOneDto) {
     return this.messageModel.findOne(args).exec();
+  }
+
+  async findAll() {
+    return this.messageModel.find().exec();
   }
 
   async findOneAndDeleteMessage(args: FindOneDto) {
@@ -44,7 +49,7 @@ export class AppService {
     const webUrl = slackBody.event.message.text
       .replace('<', '')
       .replace('>', '');
-    const mergeRequestData = await this.gitService.getMergeRequest({
+    const mergeRequest = await this.gitService.getMergeRequest({
       webUrl,
     });
 
@@ -55,12 +60,13 @@ export class AppService {
       channel: mergeRequestMessageCache.channel,
       ts: mergeRequestMessageCache.ts,
       thread_ts: mergeRequestMessageCache.thread_ts,
-      text: getMessage(mergeRequestData),
+      text: getMessage(mergeRequest),
     });
 
     await this.chatService.postSlackReactions({
-      channel: mergeRequestMessageCache.channel,
-      ts: mergeRequestMessageCache.thread_ts,
+      channel: slackBody.event.channel,
+      ts: slackBody.event.message.thread_ts,
+      reactions: getReactions(mergeRequest),
     });
   }
 
@@ -124,10 +130,11 @@ export class AppService {
       });
     }
 
-    // await this.chatService.postSlackReactions({
-    //   channel: slackBody.event.channel,
-    //   ts: slackBody.event.event_ts,
-    // });
+    await this.chatService.postSlackReactions({
+      channel: slackBody.event.channel,
+      ts: slackBody.event.event_ts,
+      reactions: getReactions(mergeRequest),
+    });
   }
 
   async handleMergerRequestUpdate(body: GitlabMergeRequestEventDto) {
@@ -139,7 +146,7 @@ export class AppService {
       return;
     }
 
-    const mergeRequestData = await this.gitService.getMergeRequest({
+    const mergeRequest = await this.gitService.getMergeRequest({
       webUrl: body.object_attributes.url,
     });
 
@@ -147,7 +154,48 @@ export class AppService {
       channel: mergeRequestMessageCache.channel,
       ts: mergeRequestMessageCache.ts,
       thread_ts: mergeRequestMessageCache.thread_ts,
-      text: getMessage(mergeRequestData),
+      text: getMessage(mergeRequest),
+    });
+
+    await this.chatService.postSlackReactions({
+      channel: mergeRequestMessageCache.channel,
+      ts: mergeRequestMessageCache.thread_ts,
+      reactions: getReactions(mergeRequest),
+    });
+  }
+
+  @Cron(CronExpression.EVERY_HOUR)
+  async handleCron() {
+    console.log('run reminder task');
+    const messages = await this.findAll();
+
+    if (!messages.length) {
+      return;
+    }
+
+    const mergeRequestsInfo = [];
+
+    for await (const message of messages) {
+      const mergeRequest = await this.gitService.getMergeRequest({
+        webUrl: message.mr_id,
+      });
+
+      if (mergeRequest.merge_status === 'can_be_merged') {
+        return;
+      }
+
+      mergeRequestsInfo.push(mergeRequest);
+    }
+
+    const reminder = getReminder(mergeRequestsInfo);
+
+    if (!reminder) {
+      return;
+    }
+
+    await this.chatService.postSlackNewMessage({
+      channel: messages[0].channel,
+      text: reminder,
     });
   }
 }

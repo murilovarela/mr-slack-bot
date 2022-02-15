@@ -107,4 +107,6 @@ export type MergeRequestResponseDto = Record<string, unknown> & {
   draft: boolean;
   merge_status: string;
   approved_by: { user: GitlabUser }[];
+  created_at: string;
+  web_url: string;
 };

@@ -87,8 +87,5 @@ export type SlackPostUpdateMessage = {
 export type SlackPostReactionsDto = {
   channel: string;
   ts: string;
-  reactions?: {
-    remove: string[];
-    add: string[];
-  };
+  reactions?: string[];
 };

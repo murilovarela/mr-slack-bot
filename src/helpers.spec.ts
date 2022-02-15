@@ -5,6 +5,7 @@ import {
   getMessage,
   getReviewers,
   getTrimmedDescription,
+  getReminder,
 } from './helpers';
 
 Object.assign(process, {
@@ -103,6 +104,29 @@ Approved by:
       ];
       expect(filterReviewers(reviewers, approvedBy)).toEqual([reviewers[0]]);
       expect(filterReviewers(reviewers, [])).toEqual(reviewers);
+    });
+  });
+
+  describe('getReminder', () => {
+    it('should return null if there is no pending MR', () => {
+      expect(getReminder([])).toBe(null);
+    });
+    it('should return the correct message', () => {
+      const mergeRequests = [mergeRequest, mergeRequest];
+      const reminder = `
+*Some merge requests need your help*
+
+1. Update README.md
+  - Open since: 2022-02-07
+  - <https://gitlab.com/sergiomurilovarela/test-project/-/merge_requests/1|Link to MR>
+  - Awaiting review from: <@luizvarela>
+
+2. Update README.md
+  - Open since: 2022-02-07
+  - <https://gitlab.com/sergiomurilovarela/test-project/-/merge_requests/1|Link to MR>
+  - Awaiting review from: <@luizvarela>
+`;
+      expect(getReminder(mergeRequests)).toEqual(reminder);
     });
   });
 });

@@ -6,12 +6,14 @@ import { AppService } from './app.service';
 import { ChatService } from './chat.service';
 import { GitService } from './git.service';
 import { Message, MessageSchema } from './message.schema';
+import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
   imports: [
     ConfigModule.forRoot(),
     MongooseModule.forRoot(process.env.MONGO_URL),
     MongooseModule.forFeature([{ name: Message.name, schema: MessageSchema }]),
+    ScheduleModule.forRoot(),
   ],
   controllers: [AppController],
   providers: [AppService, ChatService, GitService],
