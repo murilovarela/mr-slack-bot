@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { Client as Gitlab } from '@nerdvision/gitlab-js';
 import { GitlabGetMergeRequestDto, MergeRequestResponseDto } from './git.dto';
 import { getIdsFromUrl } from './helpers';

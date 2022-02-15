@@ -72,6 +72,7 @@ export class ChatService {
       }
     }
 
+    Logger.log('reacted with', messageInfo.reactions);
     return reactions;
   }
 }
