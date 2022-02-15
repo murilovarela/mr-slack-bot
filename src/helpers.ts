@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common';
 import { GitlabUser, MergeRequestResponseDto } from './git.dto';
 
 export function getIdsFromUrl(url: string): {
@@ -117,7 +118,9 @@ export function getReminder(mergeRequests: MergeRequestResponseDto[]): string {
 export function getReactions(mergeRequest?: MergeRequestResponseDto) {
   const reactions = [];
 
+  Logger.log(mergeRequest);
   if (!mergeRequest) {
+    Logger.log('no mr');
     return reactions;
   }
 

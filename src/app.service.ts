@@ -56,17 +56,17 @@ export class AppService {
     mergeRequestMessageCache.mr_id = webUrl;
     mergeRequestMessageCache.save();
 
+    await this.chatService.postSlackReactions({
+      channel: slackBody.event.channel,
+      ts: slackBody.event.message.thread_ts,
+      reactions: getReactions(mergeRequest),
+    });
+
     await this.chatService.postSlackUpdateMessage({
       channel: mergeRequestMessageCache.channel,
       ts: mergeRequestMessageCache.ts,
       thread_ts: mergeRequestMessageCache.thread_ts,
       text: getMessage(mergeRequest),
-    });
-
-    await this.chatService.postSlackReactions({
-      channel: slackBody.event.channel,
-      ts: slackBody.event.message.thread_ts,
-      reactions: getReactions(mergeRequest),
     });
   }
 

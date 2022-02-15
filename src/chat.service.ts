@@ -31,13 +31,19 @@ export class ChatService {
   }
 
   async postSlackReactions(messageInfo: SlackPostReactionsDto) {
+    Logger.log('reacted with', messageInfo.reactions);
+
     const auth = await this.slackWebClient.auth.test();
     const response = await this.slackWebClient.reactions.get({
       channel: messageInfo.channel,
       timestamp: messageInfo.ts,
       full: true,
     });
+    Logger.log('auth', auth);
+    Logger.log('response', response);
+
     const reactions = response.message.reactions ?? [];
+    Logger.log('reactions', reactions);
     const reactionsToRemove = reactions
       .filter(
         (reaction) =>
@@ -45,6 +51,7 @@ export class ChatService {
           reaction.users.includes(auth.user_id),
       )
       .map((reaction) => reaction.name);
+    Logger.log('reactionsToRemove', reactionsToRemove);
 
     for await (const reaction of reactionsToRemove) {
       try {
@@ -72,7 +79,6 @@ export class ChatService {
       }
     }
 
-    Logger.log('reacted with', messageInfo.reactions);
     return reactions;
   }
 }
