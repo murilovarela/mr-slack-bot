@@ -1,11 +1,4 @@
-import {
-  Body,
-  Controller,
-  Logger,
-  Post,
-  UseGuards,
-  UseInterceptors,
-} from '@nestjs/common';
+import { Body, Controller, Logger, Post, UseGuards } from '@nestjs/common';
 import { AppService } from './app.service';
 import { ChatService } from './chat.service';
 import {
@@ -16,10 +9,8 @@ import {
 import { GitlabMergeRequestEventDto } from './git.dto';
 import { GitGuard } from './git.guard';
 import { ChatGuard } from './chat.guard';
-import { AppInterceptor } from './app.interceptor';
 
 @Controller()
-@UseInterceptors(AppInterceptor)
 export class AppController {
   constructor(
     private readonly appService: AppService,

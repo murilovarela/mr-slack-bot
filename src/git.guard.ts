@@ -1,4 +1,9 @@
-import { Injectable, CanActivate, ExecutionContext } from '@nestjs/common';
+import {
+  Injectable,
+  CanActivate,
+  ExecutionContext,
+  Logger,
+} from '@nestjs/common';
 import { Observable } from 'rxjs';
 
 @Injectable()
@@ -8,6 +13,10 @@ export class GitGuard implements CanActivate {
   ): boolean | Promise<boolean> | Observable<boolean> {
     const request = context.switchToHttp().getRequest();
 
-    return request.headers['x-gitlab-token'] === process.env.X_GITLAB_TOKEN;
+    const verification =
+      request.headers['x-gitlab-token'] === process.env.X_GITLAB_TOKEN;
+    Logger.log('git guard verification', verification);
+
+    return verification;
   }
 }
