@@ -1,12 +1,13 @@
 # Merge Request Slack Bot
 
-This is a bot to get people to review your MR.
+This is a bot to get people to review your MR. Simply paste your link in the review channel and the bot will let people know you need a review.
 
 ## Features
 
-- Mention reviewers in Slack
-- Adds MR description to comment
-- Displays when MR is draft/open/merged/closed
+- Mention reviewers in Slack.
+- Adds MR title and description to slack reply.
+- Displays when MR is a draft/open/merged/closed with emojis.
+- Remind people to review every hour.
 
 ## How to develop it locally
 
