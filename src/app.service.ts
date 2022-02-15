@@ -89,7 +89,7 @@ export class AppService {
   }
 
   async handleNewMessage(slackBody: SlackEventCallbackDto) {
-    const webUrl = slackBody.event.text.replace('<', '').replace('>', '');
+    const webUrl = slackBody.event?.text?.replace('<', '').replace('>', '');
     const mergeRequest = await this.gitService.getMergeRequest({
       webUrl,
     });

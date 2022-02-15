@@ -10,6 +10,7 @@ export class GitService {
   }: GitlabGetMergeRequestDto): Promise<MergeRequestResponseDto> {
     const gitlabClient = new Gitlab({
       token: process.env.GITLAB_APP_OAUTH,
+      host: process.env.GITLAB_URL,
     });
     const { projectId, mergeRequestIid } = getIdsFromUrl(webUrl);
 
