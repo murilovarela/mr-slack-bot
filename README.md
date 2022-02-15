@@ -46,9 +46,10 @@ https://[ngrok-uuid].ngrok.io/slack
 
 ```
 SLACK_OAUTH=xox...
-GITLAB_APP_ID=cac...
+SLACK_SIGNING_SECRET=<slack signing secret>
 GITLAB_APP_OAUTH=glp...
 GITLAB_URL=https://gitlab.com/
+X_GITLAB_TOKEN=<webhook security token>
 MONGO_URL=mongodb+srv://<username>:<password>@<cluster>?<params>
 ```
 

@@ -1,4 +1,4 @@
-import { Body, Controller, Post } from '@nestjs/common';
+import { Body, Controller, Post, UseGuards } from '@nestjs/common';
 import { AppService } from './app.service';
 import { ChatService } from './chat.service';
 import {
@@ -7,6 +7,8 @@ import {
   SlackEventCallbackDto,
 } from './chat.dto';
 import { GitlabMergeRequestEventDto } from './git.dto';
+import { GitGuard } from './git.guard';
+import { ChatGuard } from './chat.guard';
 
 @Controller()
 export class AppController {
@@ -16,6 +18,7 @@ export class AppController {
   ) {}
 
   @Post('/slack')
+  @UseGuards(ChatGuard)
   postSlack(@Body() body: GlobalSlackEventDto): unknown {
     if (body.type === 'url_verification') {
       return this.chatService.handleChallenge(body as ChallengeDto);
@@ -53,6 +56,7 @@ export class AppController {
   }
 
   @Post('/git')
+  @UseGuards(GitGuard)
   postGit(@Body() body: GitlabMergeRequestEventDto): unknown {
     this.appService.handleMergerRequestUpdate(body);
     console.log('mr_changed');
