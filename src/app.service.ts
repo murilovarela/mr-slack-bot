@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Message, MessageDocument } from './message.schema';
@@ -166,7 +166,7 @@ export class AppService {
 
   @Cron(CronExpression.EVERY_HOUR)
   async handleCron() {
-    console.log('run reminder task');
+    Logger.log('run reminder task');
     const messages = await this.findAll();
 
     if (!messages.length) {

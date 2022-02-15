@@ -1,4 +1,11 @@
-import { Body, Controller, Post, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Logger,
+  Post,
+  UseGuards,
+  UseInterceptors,
+} from '@nestjs/common';
 import { AppService } from './app.service';
 import { ChatService } from './chat.service';
 import {
@@ -9,8 +16,10 @@ import {
 import { GitlabMergeRequestEventDto } from './git.dto';
 import { GitGuard } from './git.guard';
 import { ChatGuard } from './chat.guard';
+import { AppInterceptor } from './app.interceptor';
 
 @Controller()
+@UseInterceptors(AppInterceptor)
 export class AppController {
   constructor(
     private readonly appService: AppService,
@@ -34,19 +43,19 @@ export class AppController {
         if (body.event.subtype === 'message_changed') {
           if (body.event.message.subtype === 'tombstone') {
             this.appService.handleMessageDelete(body as SlackEventCallbackDto);
-            console.log('message_deleted');
+            Logger.log('message_deleted');
 
             return 'deleted';
           }
 
           this.appService.handleMessageUpdate(body as SlackEventCallbackDto);
-          console.log('message_changed');
+          Logger.log('message_changed');
 
           return 'updated';
         }
 
         this.appService.handleNewMessage(body as SlackEventCallbackDto);
-        console.log('message_created');
+        Logger.log('message_created');
 
         return 'new message';
       }
@@ -59,7 +68,7 @@ export class AppController {
   @UseGuards(GitGuard)
   postGit(@Body() body: GitlabMergeRequestEventDto): unknown {
     this.appService.handleMergerRequestUpdate(body);
-    console.log('mr_changed');
+    Logger.log('mr_changed');
 
     return '';
   }
