@@ -46,7 +46,7 @@ export class AppService {
       return;
     }
 
-    const webUrl = slackBody.event.message.text
+    const webUrl = slackBody.event?.message?.text
       .replace('<', '')
       .replace('>', '');
     const mergeRequest = await this.gitService.getMergeRequest({

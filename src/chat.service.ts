@@ -19,71 +19,59 @@ export class ChatService {
   slackWebClient = new WebClient(process.env.SLACK_OAUTH);
 
   async postSlackNewMessage(messageInfo: SlackPostNewMessage) {
-    try {
-      const response = await this.slackWebClient.chat.postMessage(messageInfo);
+    const response = await this.slackWebClient.chat.postMessage(messageInfo);
 
-      return response;
-    } catch (error) {
-      Logger.error(error);
-    }
+    return response;
   }
 
   async postSlackUpdateMessage(messageInfo: SlackPostUpdateMessage) {
-    try {
-      const response = await this.slackWebClient.chat.update(messageInfo);
+    const response = await this.slackWebClient.chat.update(messageInfo);
 
-      return response;
-    } catch (error) {
-      Logger.error(error);
-    }
+    return response;
   }
 
   async postSlackReactions(messageInfo: SlackPostReactionsDto) {
-    try {
-      const auth = await this.slackWebClient.auth.test();
-      const response = await this.slackWebClient.reactions.get({
-        channel: messageInfo.channel,
-        timestamp: messageInfo.ts,
-        full: true,
-      });
-      const reactions = response.message.reactions ?? [];
-      const reactionsToRemove = reactions
-        .filter(
-          (reaction) =>
-            !messageInfo.reactions.includes(reaction.name) &&
-            reaction.users.includes(auth.user_id),
-        )
-        .map((reaction) => reaction.name);
+    const auth = await this.slackWebClient.auth.test();
+    const response = await this.slackWebClient.reactions.get({
+      channel: messageInfo.channel,
+      timestamp: messageInfo.ts,
+      full: true,
+    });
+    const reactions = response.message.reactions ?? [];
+    const reactionsToRemove = reactions
+      .filter(
+        (reaction) =>
+          !messageInfo.reactions.includes(reaction.name) &&
+          reaction.users.includes(auth.user_id),
+      )
+      .map((reaction) => reaction.name);
 
-      for await (const reaction of reactionsToRemove) {
-        try {
-          await this.slackWebClient.reactions.remove({
-            channel: messageInfo.channel,
-            timestamp: messageInfo.ts,
-            full: true,
-            name: reaction,
-          });
-        } catch (error) {
-          Logger.error(error);
-        }
+    for await (const reaction of reactionsToRemove) {
+      try {
+        await this.slackWebClient.reactions.remove({
+          channel: messageInfo.channel,
+          timestamp: messageInfo.ts,
+          full: true,
+          name: reaction,
+        });
+      } catch (error) {
+        Logger.error(error);
       }
-
-      for await (const reaction of messageInfo.reactions) {
-        try {
-          await this.slackWebClient.reactions.add({
-            channel: messageInfo.channel,
-            timestamp: messageInfo.ts,
-            full: true,
-            name: reaction,
-          });
-        } catch (error) {
-          Logger.error(error);
-        }
-      }
-
-      return reactions;
-    } catch (error) {
-      Logger.error(error);
     }
+
+    for await (const reaction of messageInfo.reactions) {
+      try {
+        await this.slackWebClient.reactions.add({
+          channel: messageInfo.channel,
+          timestamp: messageInfo.ts,
+          full: true,
+          name: reaction,
+        });
+      } catch (error) {
+        Logger.error(error);
+      }
+    }
+
+    return reactions;
   }
 }

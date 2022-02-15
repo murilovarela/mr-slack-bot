@@ -8,31 +8,27 @@ export class GitService {
   async getMergeRequest({
     webUrl,
   }: GitlabGetMergeRequestDto): Promise<MergeRequestResponseDto> {
-    try {
-      const gitlabClient = new Gitlab({
-        token: process.env.GITLAB_APP_OAUTH,
-      });
-      const { projectId, mergeRequestIid } = getIdsFromUrl(webUrl);
+    const gitlabClient = new Gitlab({
+      token: process.env.GITLAB_APP_OAUTH,
+    });
+    const { projectId, mergeRequestIid } = getIdsFromUrl(webUrl);
 
-      if (!projectId || !mergeRequestIid) return null;
+    if (!projectId || !mergeRequestIid) return null;
 
-      const project = await gitlabClient.projects.find(projectId);
+    const project = await gitlabClient.projects.find(projectId);
 
-      if (!project) return null;
+    if (!project) return null;
 
-      const mergeRequest = await project.mergeRequests.find(
-        parseInt(mergeRequestIid),
-      );
+    const mergeRequest = await project.mergeRequests.find(
+      parseInt(mergeRequestIid),
+    );
 
-      if (!mergeRequest) return null;
+    if (!mergeRequest) return null;
 
-      const approvals = await mergeRequest.approvals();
+    const approvals = await mergeRequest.approvals();
 
-      if (!approvals) return null;
+    if (!approvals) return null;
 
-      return { ...mergeRequest.data, approved_by: approvals.data.approved_by };
-    } catch (error) {
-      Logger.error(error);
-    }
+    return { ...mergeRequest.data, approved_by: approvals.data.approved_by };
   }
 }
