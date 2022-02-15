@@ -129,7 +129,7 @@ export function getReactions(mergeRequest?: MergeRequestResponseDto) {
     reactions.push('mr_merged');
   }
 
-  if (mergeRequest.state === 'open') {
+  if (mergeRequest.state === 'opened') {
     reactions.push('mr_open');
   }
 
