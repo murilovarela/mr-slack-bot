@@ -24,32 +24,31 @@ export class AppController {
       return this.chatService.handleChallenge(body as ChallengeDto);
     }
 
-    if (body.type === 'event_callback') {
-      if (
-        body.event.type === 'message' &&
-        !body.event.thread_ts &&
-        !body.event.bot_id &&
-        !body.event?.message?.bot_id
-      ) {
-        if (body.event.subtype === 'message_changed') {
-          if (body.event.message.subtype === 'tombstone') {
-            this.appService.handleMessageDelete(body as SlackEventCallbackDto);
-            Logger.log('message_deleted');
+    if (body.type !== 'event_callback') {
+      return '';
+    }
 
-            return 'deleted';
-          }
-
-          this.appService.handleMessageUpdate(body as SlackEventCallbackDto);
-          Logger.log('message_changed');
-
-          return 'updated';
+    if (
+      body.event.type === 'message' &&
+      !body.event.thread_ts &&
+      !body.event.bot_id &&
+      !body.event?.message?.bot_id
+    ) {
+      if (body.event.subtype === 'message_changed') {
+        if (body.event.message.subtype === 'tombstone') {
+          Logger.log('message_deleted');
+          this.appService.handleMessageDelete(body as SlackEventCallbackDto);
+          return '';
         }
 
-        this.appService.handleNewMessage(body as SlackEventCallbackDto);
-        Logger.log('message_created');
-
-        return 'new message';
+        Logger.log('message_changed');
+        this.appService.handleMessageUpdate(body as SlackEventCallbackDto);
+        return '';
       }
+
+      Logger.log('message_created');
+      this.appService.handleNewMessage(body as SlackEventCallbackDto);
+      return '';
     }
 
     return '';
@@ -57,9 +56,8 @@ export class AppController {
 
   @Post('/git')
   @UseGuards(GitGuard)
-  postGit(@Body() body: GitlabMergeRequestEventDto): unknown {
+  postGit(@Body() body: GitlabMergeRequestEventDto): string {
     this.appService.handleMergerRequestUpdate(body);
-    Logger.log('mr_changed');
 
     return '';
   }

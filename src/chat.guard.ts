@@ -1,9 +1,4 @@
-import {
-  Injectable,
-  CanActivate,
-  ExecutionContext,
-  Logger,
-} from '@nestjs/common';
+import { Injectable, CanActivate, ExecutionContext } from '@nestjs/common';
 import { verifyRequestSignature } from '@slack/events-api';
 import { Observable } from 'rxjs';
 
@@ -19,7 +14,7 @@ export class ChatGuard implements CanActivate {
       requestTimestamp: request.headers['x-slack-request-timestamp'],
       body: request.rawBody,
     });
-    Logger.log('chat guard verification', verification);
+
     return verification;
   }
 }

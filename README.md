@@ -52,7 +52,10 @@ GITLAB_APP_OAUTH=glp...
 GITLAB_URL=https://gitlab.com/
 X_GITLAB_TOKEN=<webhook security token>
 MONGO_URL=mongodb+srv://<username>:<password>@<cluster>?<params>
+REMINDER_CRON=0 14 * * *
 ```
+
+Do not add the `REMINDER_CRON` if you don't want the reminder to run.
 
 ### Add the reactions to your Slack workspace
 

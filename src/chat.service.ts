@@ -39,11 +39,7 @@ export class ChatService {
     });
     const reactions = response.message.reactions ?? [];
     const reactionsToRemove = reactions
-      .filter(
-        (reaction) =>
-          !messageInfo.reactions.includes(reaction.name) &&
-          reaction.users.includes(auth.user_id),
-      )
+      .filter((reaction) => reaction.users.includes(auth.user_id))
       .map((reaction) => reaction.name);
 
     for await (const reaction of reactionsToRemove) {
@@ -72,7 +68,7 @@ export class ChatService {
       }
     }
 
-    Logger.log('reacted with', messageInfo.reactions);
+    Logger.log(`reacted with ${messageInfo.reactions?.join(',')}`);
     return reactions;
   }
 }
